@@ -25,14 +25,14 @@ export const store = {
     return data || null;
   },
   addUser: async (user) => {
-    const { data, error } = await supabase.from('users').insert([user]).select().single();
+    const { data, error } = await supabase.from('users').insert([user]).select();
     if (error) console.error('Error adding user:', error);
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   },
   updateUser: async (id, updates) => {
-    const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabase.from('users').update(updates).eq('id', id).select();
     if (error) console.error('Error updating user:', error);
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   },
   deleteUser: async (id) => {
     const { error } = await supabase.from('users').delete().eq('id', id);
@@ -49,14 +49,14 @@ export const store = {
     return data;
   },
   addCourse: async (course) => {
-    const { data, error } = await supabase.from('courses').insert([course]).select().single();
+    const { data, error } = await supabase.from('courses').insert([course]).select();
     if (error) console.error('Error adding course:', error);
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   },
   updateCourse: async (id, updates) => {
-    const { data, error } = await supabase.from('courses').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabase.from('courses').update(updates).eq('id', id).select();
     if (error) console.error('Error updating course:', error);
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   },
   deleteCourse: async (id) => {
     const { error } = await supabase.from('courses').delete().eq('id', id);
@@ -69,9 +69,9 @@ export const store = {
     return data || [];
   },
   addCategory: async (cat) => {
-    const { data, error } = await supabase.from('categories').insert([cat]).select().single();
+    const { data, error } = await supabase.from('categories').insert([cat]).select();
     if (error) console.error('Error adding category:', error);
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   },
 };
 

@@ -8,16 +8,19 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeStore();
-    const saved = sessionStorage.getItem('ah_session');
-    if (saved) {
-      try { setUser(JSON.parse(saved)); } catch {}
-    }
-    setLoading(false);
+    const init = async () => {
+      await initializeStore();
+      const saved = sessionStorage.getItem('ah_session');
+      if (saved) {
+        try { setUser(JSON.parse(saved)); } catch {}
+      }
+      setLoading(false);
+    };
+    init();
   }, []);
 
-  const login = (email, password) => {
-    const found = store.authenticate(email, password);
+  const login = async (email, password) => {
+    const found = await store.authenticate(email, password);
     if (found) {
       const session = { id: found.id, nombre: found.nombre, email: found.email, role: found.role };
       setUser(session);

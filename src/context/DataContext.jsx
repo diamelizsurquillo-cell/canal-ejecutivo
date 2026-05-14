@@ -9,10 +9,10 @@ export function DataProvider({ children }) {
   const [categories, setCategories] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const refresh = useCallback(() => {
-    setCourses(store.getCourses());
-    setUsers(store.getUsers());
-    setCategories(store.getCategories());
+  const refresh = useCallback(async () => {
+    setCourses(await store.getCourses());
+    setUsers(await store.getUsers());
+    setCategories(await store.getCategories());
     setRefreshKey(k => k + 1);
   }, []);
 
@@ -22,17 +22,17 @@ export function DataProvider({ children }) {
   }, [refresh]);
 
   // Course operations
-  const addCourse = (course) => { const c = store.addCourse(course); refresh(); return c; };
-  const updateCourse = (id, updates) => { const c = store.updateCourse(id, updates); refresh(); return c; };
-  const deleteCourse = (id) => { store.deleteCourse(id); refresh(); };
+  const addCourse = async (course) => { const c = await store.addCourse(course); refresh(); return c; };
+  const updateCourse = async (id, updates) => { const c = await store.updateCourse(id, updates); refresh(); return c; };
+  const deleteCourse = async (id) => { await store.deleteCourse(id); refresh(); };
 
   // User/Docente operations
-  const addUser = (user) => { const u = store.addUser(user); refresh(); return u; };
-  const updateUser = (id, updates) => { const u = store.updateUser(id, updates); refresh(); return u; };
-  const deleteUser = (id) => { store.deleteUser(id); refresh(); };
+  const addUser = async (user) => { const u = await store.addUser(user); refresh(); return u; };
+  const updateUser = async (id, updates) => { const u = await store.updateUser(id, updates); refresh(); return u; };
+  const deleteUser = async (id) => { await store.deleteUser(id); refresh(); };
 
   // Category operations
-  const addCategory = (cat) => { const c = store.addCategory(cat); refresh(); return c; };
+  const addCategory = async (cat) => { const c = await store.addCategory(cat); refresh(); return c; };
 
   // Helpers
   const getDocentes = () => users.filter(u => u.role === 'docente' || u.role === 'admin');

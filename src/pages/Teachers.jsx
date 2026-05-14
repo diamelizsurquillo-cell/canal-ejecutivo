@@ -27,15 +27,15 @@ export default function Teachers() {
     setShowForm(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.nombre.trim() || !form.email.trim()) return;
     if (editId) {
       const updates = { nombre: form.nombre, email: form.email, especialidad: form.especialidad };
       if (form.password) updates.password = form.password;
-      updateUser(editId, updates);
+      await updateUser(editId, updates);
     } else {
-      addUser(form);
+      await addUser(form);
     }
     resetForm();
   };
@@ -51,15 +51,15 @@ export default function Teachers() {
     setDeleteTarget(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteTarget) {
-      deleteUser(deleteTarget);
+      await deleteUser(deleteTarget);
       setDeleteTarget(null);
     }
   };
 
-  const toggleActive = (d) => {
-    updateUser(d.id, { activo: !d.activo });
+  const toggleActive = async (d) => {
+    await updateUser(d.id, { activo: !d.activo });
   };
 
   const getCourseCount = (id) => courses.filter(c => c.docente_id === id).length;

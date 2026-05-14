@@ -34,15 +34,15 @@ export default function Courses() {
   if (filterCategory) filtered = filtered.filter(c => c.categoria_id === filterCategory);
   if (filterDay) filtered = filtered.filter(c => c.dias?.includes(filterDay));
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteTarget) {
-      deleteCourse(deleteTarget);
+      await deleteCourse(deleteTarget);
       setDeleteTarget(null);
     }
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    updateCourse(id, { estado: newStatus });
+  const handleStatusChange = async (id, newStatus) => {
+    await updateCourse(id, { estado: newStatus });
   };
 
   const canEdit = (course) => isAdmin || course.docente_id === user.id;

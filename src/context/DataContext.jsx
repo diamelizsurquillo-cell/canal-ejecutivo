@@ -22,17 +22,17 @@ export function DataProvider({ children }) {
   }, [refresh]);
 
   // Course operations
-  const addCourse = async (course) => { const c = await store.addCourse(course); refresh(); return c; };
-  const updateCourse = async (id, updates) => { const c = await store.updateCourse(id, updates); refresh(); return c; };
-  const deleteCourse = async (id) => { await store.deleteCourse(id); refresh(); };
+  const addCourse = async (course) => { const c = await store.addCourse(course); await refresh(); return c; };
+  const updateCourse = async (id, updates) => { const c = await store.updateCourse(id, updates); await refresh(); return c; };
+  const deleteCourse = async (id) => { await store.deleteCourse(id); await refresh(); };
 
   // User/Docente operations
-  const addUser = async (user) => { const u = await store.addUser(user); refresh(); return u; };
-  const updateUser = async (id, updates) => { const u = await store.updateUser(id, updates); refresh(); return u; };
-  const deleteUser = async (id) => { await store.deleteUser(id); refresh(); };
+  const addUser = async (user) => { const u = await store.addUser(user); await refresh(); return u; };
+  const updateUser = async (id, updates) => { const u = await store.updateUser(id, updates); await refresh(); return u; };
+  const deleteUser = async (id) => { await store.deleteUser(id); await refresh(); };
 
   // Category operations
-  const addCategory = async (cat) => { const c = await store.addCategory(cat); refresh(); return c; };
+  const addCategory = async (cat) => { const c = await store.addCategory(cat); await refresh(); return c; };
 
   // Helpers
   const getDocentes = () => users.filter(u => u.role === 'docente' || u.role === 'admin');

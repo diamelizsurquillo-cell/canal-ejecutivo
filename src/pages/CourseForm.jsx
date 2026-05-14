@@ -71,29 +71,25 @@ export default function CourseForm() {
     return found.length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     if (!checkConflicts()) return;
 
     setSaving(true);
-    setTimeout(() => {
-      if (isEdit) {
-        updateCourse(id, form);
-      } else {
-        addCourse({ ...form, created_by: user.id });
-      }
-      navigate('/cursos');
-    }, 300);
+    if (isEdit) {
+      await updateCourse(id, form);
+    } else {
+      await addCourse({ ...form, created_by: user.id });
+    }
+    navigate('/cursos');
   };
 
-  const forceSubmit = () => {
+  const forceSubmit = async () => {
     setSaving(true);
-    setTimeout(() => {
-      if (isEdit) updateCourse(id, form);
-      else addCourse({ ...form, created_by: user.id });
-      navigate('/cursos');
-    }, 300);
+    if (isEdit) await updateCourse(id, form);
+    else await addCourse({ ...form, created_by: user.id });
+    navigate('/cursos');
   };
 
   return (

@@ -1,0 +1,4 @@
+[
+  {"nombre":"Jefferson","email":"jefferson_15_6@hotmail.com","password":"admin123","role":"admin","activo":true},
+  {"nombre":"Administrador","email":"admin@academichub.com","password":"admin123","role":"admin","especialidad":"Gestión Académica","activo":true}
+]

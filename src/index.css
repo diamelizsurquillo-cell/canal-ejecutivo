@@ -251,6 +251,77 @@ input.error, select.error { border-color: var(--danger); }
   .filter-group { width: 100%; }
   .filter-group select { flex: 1; min-width: 0; }
   .course-detail-modal .detail-grid { grid-template-columns: 1fr; }
+
+  /* ── Calendar Mobile ── */
+  .calendar-wrapper { padding: 8px; }
+  .calendar-wrapper .fc { font-size: 0.75rem; }
+
+  /* Toolbar header: stack and center */
+  .calendar-wrapper .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 4px 0;
+  }
+  .calendar-wrapper .fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 8px;
+  }
+  .calendar-wrapper .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .calendar-wrapper .fc .fc-toolbar-title {
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  /* Buttons: smaller, compact */
+  .calendar-wrapper .fc .fc-button {
+    padding: 5px 8px;
+    font-size: 0.7rem;
+    border-radius: 6px !important;
+  }
+  .calendar-wrapper .fc .fc-button-group {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  /* Footer toolbar for view switchers */
+  .calendar-wrapper .fc .fc-footer-toolbar {
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  /* Time grid: narrower slots */
+  .calendar-wrapper .fc .fc-timegrid-slot { height: 32px; }
+  .calendar-wrapper .fc .fc-timegrid-axis { width: 36px; font-size: 0.65rem; }
+  .calendar-wrapper .fc .fc-timegrid-slot-label { font-size: 0.65rem; }
+
+  /* Day headers */
+  .calendar-wrapper .fc .fc-col-header-cell-cushion {
+    font-size: 0.7rem;
+    padding: 4px 2px;
+  }
+
+  /* Events: tighter on mobile */
+  .cal-event { padding: 1px 2px; font-size: 0.62rem; line-height: 1.2; }
+  .cal-event strong { font-size: 0.68rem; }
+  .cal-event span:last-child { display: none; }
+
+  /* List view: better spacing */
+  .calendar-wrapper .fc .fc-list { font-size: 0.8rem; }
+  .calendar-wrapper .fc .fc-list-event td { padding: 8px 6px; }
+  .calendar-wrapper .fc .fc-list-day-cushion { padding: 6px 8px; font-size: 0.8rem; }
+
+  /* Month view: compact cells */
+  .calendar-wrapper .fc .fc-daygrid-day { min-height: 50px; }
+  .calendar-wrapper .fc .fc-daygrid-day-number { font-size: 0.7rem; padding: 2px 4px; }
+  .calendar-wrapper .fc .fc-daygrid-event { font-size: 0.62rem; margin: 0 1px 1px; }
+
+  /* Page header */
+  .calendar-page .page-header h1 { font-size: 1.25rem; }
 }
 
 /* ── Recharts tooltip fix ── */

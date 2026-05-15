@@ -56,6 +56,8 @@ export default function CalendarView() {
 
   const sel = selectedEvent;
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <div className="calendar-page">
       <div className="page-header">
@@ -65,12 +67,19 @@ export default function CalendarView() {
       <div className="calendar-wrapper card">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          headerToolbar={{
+          initialView={isMobile ? 'listWeek' : 'timeGridWeek'}
+          headerToolbar={isMobile ? {
+            left: 'prev,next',
+            center: 'title',
+            right: 'today'
+          } : {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
           }}
+          footerToolbar={isMobile ? {
+            center: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+          } : false}
           locale="es"
           events={events}
           eventClick={handleEventClick}
@@ -84,6 +93,12 @@ export default function CalendarView() {
           nowIndicator={true}
           buttonText={{
             today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Lista'
+          }}
+          dayHeaderFormat={isMobile ? { weekday: 'short', day: 'numeric' } : undefined}
+          views={{
+            timeGridWeek: {
+              dayHeaderFormat: isMobile ? { weekday: 'narrow', day: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'numeric' }
+            }
           }}
         />
       </div>

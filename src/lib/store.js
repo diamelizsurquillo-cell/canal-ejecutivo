@@ -73,6 +73,40 @@ export const store = {
     if (error) console.error('Error adding category:', error);
     return data && data.length > 0 ? data[0] : null;
   },
+
+  // File uploads (Flyers)
+  uploadFlyer: async (file, courseId) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${courseId}-${Date.now()}.${fileExt}`;
+    const filePath = `flyers/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('course-files')
+      .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) {
+      console.error('Error uploading flyer:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('course-files')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  },
+
+  deleteFlyer: async (flyerUrl) => {
+    if (!flyerUrl) return;
+    try {
+      const path = flyerUrl.split('/course-files/')[1];
+      if (path) {
+        await supabase.storage.from('course-files').remove([path]);
+      }
+    } catch (err) {
+      console.error('Error deleting flyer:', err);
+    }
+  },
 };
 
 export async function initializeStore() {

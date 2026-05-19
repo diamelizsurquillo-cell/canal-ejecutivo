@@ -92,7 +92,12 @@ export default function Courses() {
             const cat = getCategoryById(course.categoria_id);
             return (
               <div className="course-card" key={course.id}>
-                <div className="course-card-header" style={{ borderTopColor: cat?.color || '#6366f1' }}>
+                {course.flyer_url && (
+                  <div className="course-card-flyer">
+                    <img src={course.flyer_url} alt={`Flyer de ${course.nombre}`} />
+                  </div>
+                )}
+                <div className="course-card-header" style={{ borderTopColor: course.flyer_url ? 'transparent' : (cat?.color || '#6366f1') }}>
                   <div className="course-card-top">
                     <span className="course-category-tag" style={{ background: (cat?.color || '#6366f1') + '20', color: cat?.color || '#6366f1' }}>
                       {cat?.nombre || 'Sin categoría'}
@@ -176,6 +181,11 @@ function CourseDetailContent({ course, getDocenteById, getCategoryById }) {
   const { isAdmin, user } = useAuth();
   return (
     <div className="course-detail-modal">
+      {course.flyer_url && (
+        <div className="detail-flyer">
+          <img src={course.flyer_url} alt={`Flyer de ${course.nombre}`} />
+        </div>
+      )}
       <div className="detail-grid">
         <div><span className="label">Categoría</span><span className="course-category-tag" style={{ background: (cat?.color || '#6366f1') + '20', color: cat?.color || '#6366f1' }}>{cat?.nombre}</span></div>
         <div><span className="label">Estado</span><span className={`badge badge-${course.estado}`}>{STATUS_LABELS[course.estado]}</span></div>

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { detectConflicts, DAY_ORDER } from '../lib/conflicts';
-import { Save, ArrowLeft, AlertTriangle, Video } from 'lucide-react';
+import { Save, ArrowLeft, AlertTriangle, Video, ImagePlus, X, Loader } from 'lucide-react';
 
 const DAYS = [
   { key: 'lunes', label: 'Lunes' }, { key: 'martes', label: 'Martes' },
@@ -14,25 +14,32 @@ const DAYS = [
 const EMPTY = {
   nombre: '', descripcion: '', docente_id: '', categoria_id: '', dias: [],
   hora_inicio: '09:00', hora_fin: '11:00', fecha_inicio: '', fecha_fin: '',
-  dirigido_a: '', estado: 'borrador', meet_link: '',
+  dirigido_a: '', estado: 'borrador', meet_link: '', flyer_url: '',
 };
 
 export default function CourseForm() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
-  const { courses, addCourse, updateCourse, getDocentes, categories } = useData();
+  const { courses, addCourse, updateCourse, getDocentes, categories, uploadFlyer, deleteFlyer } = useData();
   const { user, isAdmin } = useAuth();
 
   const [form, setForm] = useState(EMPTY);
   const [conflicts, setConflicts] = useState([]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [flyerFile, setFlyerFile] = useState(null);
+  const [flyerPreview, setFlyerPreview] = useState('');
+  const [uploadingFlyer, setUploadingFlyer] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (isEdit) {
       const course = courses.find(c => c.id === id);
-      if (course) setForm({ ...course });
+      if (course) {
+        setForm({ ...course });
+        if (course.flyer_url) setFlyerPreview(course.flyer_url);
+      }
       else navigate('/cursos');
     }
   }, [id, courses]);
@@ -49,6 +56,30 @@ export default function CourseForm() {
       ...prev,
       dias: prev.dias.includes(day) ? prev.dias.filter(d => d !== day) : [...prev.dias, day]
     }));
+  };
+
+  const handleFlyerSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    // Validate file type and size (max 5MB)
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, flyer: 'Solo se permiten imágenes (JPG, PNG, WebP)' }));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, flyer: 'La imagen no debe superar los 5MB' }));
+      return;
+    }
+    setFlyerFile(file);
+    setFlyerPreview(URL.createObjectURL(file));
+    setErrors(prev => ({ ...prev, flyer: '' }));
+  };
+
+  const removeFlyer = () => {
+    setFlyerFile(null);
+    setFlyerPreview('');
+    setForm(prev => ({ ...prev, flyer_url: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const validate = () => {
@@ -71,25 +102,47 @@ export default function CourseForm() {
     return found.length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    if (!checkConflicts()) return;
+  const saveCourse = async (courseData) => {
+    let flyerUrl = courseData.flyer_url || '';
 
-    setSaving(true);
+    // Upload new flyer if selected
+    if (flyerFile) {
+      setUploadingFlyer(true);
+      // Delete old flyer if replacing
+      if (isEdit && form.flyer_url) {
+        await deleteFlyer(form.flyer_url);
+      }
+      const courseIdForUpload = isEdit ? id : crypto.randomUUID();
+      const url = await uploadFlyer(flyerFile, courseIdForUpload);
+      if (url) flyerUrl = url;
+      setUploadingFlyer(false);
+    } else if (!flyerPreview && isEdit && form.flyer_url) {
+      // User removed the flyer
+      await deleteFlyer(form.flyer_url);
+      flyerUrl = '';
+    }
+
+    const finalData = { ...courseData, flyer_url: flyerUrl };
+
     if (isEdit) {
-      await updateCourse(id, form);
+      await updateCourse(id, finalData);
     } else {
-      await addCourse({ ...form, created_by: user.id });
+      await addCourse({ ...finalData, created_by: user.id });
     }
     navigate('/cursos');
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    if (!checkConflicts()) return;
+    setSaving(true);
+    await saveCourse(form);
+  };
+
   const forceSubmit = async () => {
     setSaving(true);
-    if (isEdit) await updateCourse(id, form);
-    else await addCourse({ ...form, created_by: user.id });
-    navigate('/cursos');
+    await saveCourse(form);
   };
 
   return (
@@ -190,6 +243,38 @@ export default function CourseForm() {
               placeholder={isAdmin ? "https://meet.google.com/xxx-yyyy-zzz" : "Solo el administrador puede asignar el enlace"} disabled={!isAdmin} />
           </div>
 
+          {/* Flyer upload */}
+          <div className="form-group form-col-2">
+            <label><ImagePlus size={16} style={{ verticalAlign: 'middle' }} /> Flyer del curso</label>
+            {flyerPreview ? (
+              <div className="flyer-preview-container">
+                <img src={flyerPreview} alt="Vista previa del flyer" className="flyer-preview-img" />
+                <div className="flyer-preview-actions">
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => fileInputRef.current?.click()}>
+                    Cambiar imagen
+                  </button>
+                  <button type="button" className="btn btn-sm btn-danger-ghost" onClick={removeFlyer}>
+                    <X size={14} /> Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flyer-upload-zone" onClick={() => fileInputRef.current?.click()}>
+                <ImagePlus size={32} />
+                <p>Haz clic para subir el flyer del curso</p>
+                <span>JPG, PNG o WebP — máximo 5MB</span>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFlyerSelect}
+              style={{ display: 'none' }}
+            />
+            {errors.flyer && <span className="form-error">{errors.flyer}</span>}
+          </div>
+
           {/* Estado */}
           <div className="form-group">
             <label htmlFor="course-status">Estado</label>
@@ -212,8 +297,10 @@ export default function CourseForm() {
 
         <div className="form-actions">
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/cursos')}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            <Save size={18} /> {saving ? 'Guardando...' : isEdit ? 'Actualizar Curso' : 'Crear Curso'}
+          <button type="submit" className="btn btn-primary" disabled={saving || uploadingFlyer}>
+            {uploadingFlyer ? <><Loader size={18} className="spin" /> Subiendo flyer...</> :
+              saving ? <><Loader size={18} className="spin" /> Guardando...</> :
+              <><Save size={18} /> {isEdit ? 'Actualizar Curso' : 'Crear Curso'}</>}
           </button>
         </div>
       </form>

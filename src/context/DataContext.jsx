@@ -34,6 +34,10 @@ export function DataProvider({ children }) {
   // Category operations
   const addCategory = async (cat) => { const c = await store.addCategory(cat); await refresh(); return c; };
 
+  // File operations
+  const uploadFlyer = async (file, courseId) => await store.uploadFlyer(file, courseId);
+  const deleteFlyer = async (flyerUrl) => await store.deleteFlyer(flyerUrl);
+
   // Helpers
   const getDocentes = () => users.filter(u => u.role === 'docente' || u.role === 'admin');
   const getDocenteById = (id) => users.find(u => u.id === id);
@@ -45,6 +49,7 @@ export function DataProvider({ children }) {
       addCourse, updateCourse, deleteCourse,
       addUser, updateUser, deleteUser,
       addCategory,
+      uploadFlyer, deleteFlyer,
       getDocentes, getDocenteById, getCategoryById,
       refresh
     }}>

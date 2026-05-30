@@ -7,12 +7,14 @@ export function DataProvider({ children }) {
   const [courses, setCourses] = useState([]);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = useCallback(async () => {
     setCourses(await store.getCourses());
     setUsers(await store.getUsers());
     setCategories(await store.getCategories());
+    setEnrollments(await store.getEnrollments());
     setRefreshKey(k => k + 1);
   }, []);
 
@@ -34,6 +36,11 @@ export function DataProvider({ children }) {
   // Category operations
   const addCategory = async (cat) => { const c = await store.addCategory(cat); await refresh(); return c; };
 
+  // Enrollment operations
+  const addEnrollment = async (enrollment) => { const e = await store.addEnrollment(enrollment); await refresh(); return e; };
+  const updateEnrollment = async (id, updates) => { const e = await store.updateEnrollment(id, updates); await refresh(); return e; };
+  const deleteEnrollment = async (id) => { await store.deleteEnrollment(id); await refresh(); };
+
   // File operations
   const uploadFlyer = async (file, courseId) => await store.uploadFlyer(file, courseId);
   const deleteFlyer = async (flyerUrl) => await store.deleteFlyer(flyerUrl);
@@ -45,10 +52,11 @@ export function DataProvider({ children }) {
 
   return (
     <DataContext.Provider value={{
-      courses, users, categories, refreshKey,
+      courses, users, categories, enrollments, refreshKey,
       addCourse, updateCourse, deleteCourse,
       addUser, updateUser, deleteUser,
       addCategory,
+      addEnrollment, updateEnrollment, deleteEnrollment,
       uploadFlyer, deleteFlyer,
       getDocentes, getDocenteById, getCategoryById,
       refresh

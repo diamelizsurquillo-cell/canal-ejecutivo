@@ -406,3 +406,74 @@ input.error, select.error { border-color: var(--danger); }
 
 /* ── Recharts tooltip fix ── */
 .recharts-tooltip-wrapper { outline: none !important; }
+
+/* ── Premium Tables ── */
+.table-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  margin-top: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.premium-table th {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+[data-theme="light"] .premium-table th {
+  background: rgba(0, 0, 0, 0.02);
+}
+.premium-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  color: var(--text);
+  vertical-align: middle;
+}
+.premium-table tbody tr {
+  transition: background-color 0.2s;
+}
+.premium-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+[data-theme="light"] .premium-table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.01);
+}
+.premium-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.student-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.student-name-cell .sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.monto-cell {
+  font-weight: 600;
+  color: var(--success);
+}
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+

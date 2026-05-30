@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import {
   LayoutDashboard, BookOpen, Calendar, Users, LogOut,
-  Menu, X, Sun, Moon, GraduationCap, User
+  Menu, X, Sun, Moon, GraduationCap, User, ClipboardList
 } from 'lucide-react';
 import Modal from './Modal';
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/cursos', icon: BookOpen, label: 'Cursos' },
   { to: '/calendario', icon: Calendar, label: 'Calendario' },
   { to: '/docentes', icon: Users, label: 'Docentes' },
+  { to: '/registros', icon: ClipboardList, label: 'Registros' },
 ];
 
 export default function Layout({ children }) {

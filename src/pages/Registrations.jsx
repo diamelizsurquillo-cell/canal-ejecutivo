@@ -1,8 +1,25 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit2, Trash2, Search, AlertTriangle, Mail, CreditCard, User, GraduationCap, Coins } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, AlertTriangle, Mail, CreditCard, User, GraduationCap, Coins, Phone } from 'lucide-react';
 import Modal from '../components/Modal';
+
+const parseNombres = (nombresRaw) => {
+  if (!nombresRaw) return { nombres: '', codigo_pais: '+51', celular: '' };
+  const match = nombresRaw.match(/(.*?)\s*\[Tel:\s*(\+\d+)\s+(.*?)\]/);
+  if (match) {
+    return {
+      nombres: match[1].trim(),
+      codigo_pais: match[2],
+      celular: match[3]
+    };
+  }
+  return {
+    nombres: nombresRaw.trim(),
+    codigo_pais: '+51',
+    celular: ''
+  };
+};
 
 export default function Registrations() {
   const { enrollments, courses, addEnrollment, updateEnrollment, deleteEnrollment } = useData();
@@ -19,7 +36,9 @@ export default function Registrations() {
     dni: '',
     correo: '',
     monto: '',
-    curso_id: ''
+    curso_id: '',
+    codigo_pais: '+51',
+    celular: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -27,7 +46,7 @@ export default function Registrations() {
 
   // Reset form state
   const resetForm = () => {
-    setForm({ nombres: '', apellidos: '', dni: '', correo: '', monto: '', curso_id: '' });
+    setForm({ nombres: '', apellidos: '', dni: '', correo: '', monto: '', curso_id: '', codigo_pais: '+51', celular: '' });
     setEditId(null);
     setErrors({});
     setShowForm(false);
@@ -35,13 +54,16 @@ export default function Registrations() {
 
   // Populate form for editing
   const handleEdit = (reg) => {
+    const parsed = parseNombres(reg.nombres);
     setForm({
-      nombres: reg.nombres,
+      nombres: parsed.nombres,
       apellidos: reg.apellidos,
       dni: reg.dni,
       correo: reg.correo,
       monto: reg.monto,
-      curso_id: reg.curso_id || ''
+      curso_id: reg.curso_id || '',
+      codigo_pais: parsed.codigo_pais,
+      celular: parsed.celular
     });
     setEditId(reg.id);
     setShowForm(true);
@@ -79,6 +101,15 @@ export default function Registrations() {
       err.curso_id = 'Debes seleccionar un curso';
     }
 
+    if (form.celular.trim()) {
+      const cleanPhone = form.celular.trim().replace(/[-\s]/g, '');
+      if (!/^\d+$/.test(cleanPhone)) {
+        err.celular = 'El celular debe contener solo números';
+      } else if (cleanPhone.length < 6) {
+        err.celular = 'El celular es demasiado corto';
+      }
+    }
+
     setErrors(err);
     return Object.keys(err).length === 0;
   };
@@ -87,8 +118,13 @@ export default function Registrations() {
     e.preventDefault();
     if (!validate()) return;
 
+    // Pack cell phone in name if present
+    const nombresFormatted = form.celular.trim() 
+      ? `${form.nombres.trim()} [Tel: ${form.codigo_pais} ${form.celular.trim()}]`
+      : form.nombres.trim();
+
     const data = {
-      nombres: form.nombres.trim(),
+      nombres: nombresFormatted,
       apellidos: form.apellidos.trim(),
       dni: form.dni.trim(),
       correo: form.correo.trim().toLowerCase(),
@@ -115,12 +151,16 @@ export default function Registrations() {
   let filtered = enrollments || [];
   if (search) {
     const q = search.toLowerCase();
-    filtered = filtered.filter(r => 
-      r.nombres?.toLowerCase().includes(q) ||
-      r.apellidos?.toLowerCase().includes(q) ||
-      r.dni?.includes(q) ||
-      r.correo?.toLowerCase().includes(q)
-    );
+    filtered = filtered.filter(r => {
+      const parsed = parseNombres(r.nombres);
+      return (
+        parsed.nombres?.toLowerCase().includes(q) ||
+        r.apellidos?.toLowerCase().includes(q) ||
+        r.dni?.includes(q) ||
+        r.correo?.toLowerCase().includes(q) ||
+        parsed.celular?.includes(q)
+      );
+    });
   }
   if (filterCourse) {
     filtered = filtered.filter(r => r.curso_id === filterCourse);
@@ -188,7 +228,7 @@ export default function Registrations() {
           <Search size={18} />
           <input 
             type="text" 
-            placeholder="Buscar alumno por nombre, DNI, correo..." 
+            placeholder="Buscar por nombre, DNI, correo, celular..." 
             value={search} 
             onChange={e => setSearch(e.target.value)} 
           />
@@ -225,44 +265,52 @@ export default function Registrations() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(reg => (
-                  <tr key={reg.id}>
-                    <td>
-                      <div className="student-name-cell">
-                        <strong>{reg.nombres}</strong>
-                        <span className="sub">{reg.apellidos}</span>
-                      </div>
-                    </td>
-                    <td><code>{reg.dni}</code></td>
-                    <td>
-                      <span className="teacher-email">
-                        <Mail size={14} style={{ flexShrink: 0 }} /> {reg.correo}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="course-category-tag" style={{ background: 'var(--primary-bg)', color: 'var(--primary)' }}>
-                        {getCourseName(reg.curso_id)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="monto-cell">
-                        S/ {parseFloat(reg.monto || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="actions-cell">
-                        <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(reg)} title="Editar">
-                          <Edit2 size={16} />
-                        </button>
-                        {isAdmin && (
-                          <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleteTarget(reg.id)} title="Eliminar">
-                            <Trash2 size={16} />
+                {filtered.map(reg => {
+                  const parsed = parseNombres(reg.nombres);
+                  return (
+                    <tr key={reg.id}>
+                      <td>
+                        <div className="student-name-cell">
+                          <strong>{parsed.nombres}</strong>
+                          {parsed.celular && (
+                            <span className="student-phone" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                              <Phone size={12} style={{ flexShrink: 0 }} /> {parsed.codigo_pais} {parsed.celular}
+                            </span>
+                          )}
+                          <span className="sub">{reg.apellidos}</span>
+                        </div>
+                      </td>
+                      <td><code>{reg.dni}</code></td>
+                      <td>
+                        <span className="teacher-email">
+                          <Mail size={14} style={{ flexShrink: 0 }} /> {reg.correo}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="course-category-tag" style={{ background: 'var(--primary-bg)', color: 'var(--primary)' }}>
+                          {getCourseName(reg.curso_id)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="monto-cell">
+                          S/ {parseFloat(reg.monto || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="actions-cell">
+                          <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(reg)} title="Editar">
+                            <Edit2 size={16} />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {isAdmin && (
+                            <button className="btn btn-sm btn-danger-ghost" onClick={() => setDeleteTarget(reg.id)} title="Eliminar">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -346,6 +394,40 @@ export default function Registrations() {
                 required 
               />
               {errors.monto && <span className="form-error">{errors.monto}</span>}
+            </div>
+          </div>
+
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '12px', marginTop: '12px' }}>
+            <div className="form-group">
+              <label htmlFor="reg-codigo-pais">Cód. País</label>
+              <select 
+                id="reg-codigo-pais" 
+                value={form.codigo_pais} 
+                onChange={e => setForm({ ...form, codigo_pais: e.target.value })}
+              >
+                <option value="+51">+51 (PE)</option>
+                <option value="+54">+54 (AR)</option>
+                <option value="+591">+591 (BO)</option>
+                <option value="+56">+56 (CL)</option>
+                <option value="+57">+57 (CO)</option>
+                <option value="+593">+593 (EC)</option>
+                <option value="+34">+34 (ES)</option>
+                <option value="+52">+52 (MX)</option>
+                <option value="+1">+1 (US/CA)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="reg-celular"><Phone size={14} /> Celular</label>
+              <input 
+                id="reg-celular" 
+                type="tel" 
+                value={form.celular} 
+                onChange={e => setForm({ ...form, celular: e.target.value })} 
+                className={errors.celular ? 'error' : ''} 
+                placeholder="Ej. 987654321"
+              />
+              {errors.celular && <span className="form-error">{errors.celular}</span>}
             </div>
           </div>
 

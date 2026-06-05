@@ -258,6 +258,7 @@ export default function Registrations() {
                 <tr>
                   <th>Alumno</th>
                   <th>DNI</th>
+                  <th>Celular</th>
                   <th>Correo</th>
                   <th>Curso</th>
                   <th>Monto Pagado</th>
@@ -272,15 +273,19 @@ export default function Registrations() {
                       <td>
                         <div className="student-name-cell">
                           <strong>{parsed.nombres}</strong>
-                          {parsed.celular && (
-                            <span className="student-phone" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                              <Phone size={12} style={{ flexShrink: 0 }} /> {parsed.codigo_pais} {parsed.celular}
-                            </span>
-                          )}
                           <span className="sub">{reg.apellidos}</span>
                         </div>
                       </td>
                       <td><code>{reg.dni}</code></td>
+                      <td>
+                        {parsed.celular ? (
+                          <span className="student-phone" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}>
+                            <Phone size={14} style={{ flexShrink: 0, color: 'var(--primary)' }} /> {parsed.codigo_pais} {parsed.celular}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>—</span>
+                        )}
+                      </td>
                       <td>
                         <span className="teacher-email">
                           <Mail size={14} style={{ flexShrink: 0 }} /> {reg.correo}

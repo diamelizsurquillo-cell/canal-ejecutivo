@@ -63,10 +63,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="login-hints">
-          <p><strong>Demo Admin:</strong> admin@academichub.com / admin123</p>
-          <p><strong>Demo Docente:</strong> maria@academichub.com / docente123</p>
-        </div>
       </div>
     </div>
   );

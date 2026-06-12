@@ -244,6 +244,77 @@ export const store = {
       localStorage.setItem('ah_enrollments', JSON.stringify(list));
     }
   },
+
+  // Expenses (Egresos)
+  getExpenses: async () => {
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('fecha', { ascending: false });
+      if (error) throw error;
+      localStorage.setItem('ah_expenses', JSON.stringify(data || []));
+      return data || [];
+    } catch (err) {
+      console.warn('Error getting expenses from Supabase, falling back to local:', err);
+      const local = localStorage.getItem('ah_expenses');
+      return local ? JSON.parse(local) : [];
+    }
+  },
+  addExpense: async (expense) => {
+    const newExpense = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36),
+      created_at: new Date().toISOString(),
+      ...expense
+    };
+    try {
+      const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
+      if (error) throw error;
+      const saved = data && data.length > 0 ? data[0] : newExpense;
+      const local = localStorage.getItem('ah_expenses');
+      const list = local ? JSON.parse(local) : [];
+      list.unshift(saved);
+      localStorage.setItem('ah_expenses', JSON.stringify(list));
+      return saved;
+    } catch (err) {
+      console.warn('Error adding expense to Supabase, falling back to local:', err);
+      const local = localStorage.getItem('ah_expenses');
+      const list = local ? JSON.parse(local) : [];
+      list.unshift(newExpense);
+      localStorage.setItem('ah_expenses', JSON.stringify(list));
+      return newExpense;
+    }
+  },
+  updateExpense: async (id, updates) => {
+    try {
+      const { data, error } = await supabase.from('expenses').update(updates).eq('id', id).select();
+      if (error) throw error;
+      const updated = data && data.length > 0 ? data[0] : null;
+      const local = localStorage.getItem('ah_expenses');
+      let list = local ? JSON.parse(local) : [];
+      list = list.map(item => item.id === id ? { ...item, ...updates, ...updated } : item);
+      localStorage.setItem('ah_expenses', JSON.stringify(list));
+      return updated || { id, ...updates };
+    } catch (err) {
+      console.warn('Error updating expense in Supabase, falling back to local:', err);
+      const local = localStorage.getItem('ah_expenses');
+      let list = local ? JSON.parse(local) : [];
+      list = list.map(item => item.id === id ? { ...item, ...updates } : item);
+      localStorage.setItem('ah_expenses', JSON.stringify(list));
+      return { id, ...updates };
+    }
+  },
+  deleteExpense: async (id) => {
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Error deleting expense in Supabase, falling back to local:', err);
+    }
+    const local = localStorage.getItem('ah_expenses');
+    if (local) {
+      let list = JSON.parse(local);
+      list = list.filter(item => item.id !== id);
+      localStorage.setItem('ah_expenses', JSON.stringify(list));
+    }
+  },
 };
 
 export async function initializeStore() {

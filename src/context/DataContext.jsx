@@ -8,6 +8,7 @@ export function DataProvider({ children }) {
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = useCallback(async () => {
@@ -15,6 +16,7 @@ export function DataProvider({ children }) {
     setUsers(await store.getUsers());
     setCategories(await store.getCategories());
     setEnrollments(await store.getEnrollments());
+    setExpenses(await store.getExpenses());
     setRefreshKey(k => k + 1);
   }, []);
 
@@ -41,6 +43,11 @@ export function DataProvider({ children }) {
   const updateEnrollment = async (id, updates) => { const e = await store.updateEnrollment(id, updates); await refresh(); return e; };
   const deleteEnrollment = async (id) => { await store.deleteEnrollment(id); await refresh(); };
 
+  // Expense operations
+  const addExpense = async (expense) => { const e = await store.addExpense(expense); await refresh(); return e; };
+  const updateExpense = async (id, updates) => { const e = await store.updateExpense(id, updates); await refresh(); return e; };
+  const deleteExpense = async (id) => { await store.deleteExpense(id); await refresh(); };
+
   // File operations
   const uploadFlyer = async (file, courseId) => await store.uploadFlyer(file, courseId);
   const deleteFlyer = async (flyerUrl) => await store.deleteFlyer(flyerUrl);
@@ -52,11 +59,12 @@ export function DataProvider({ children }) {
 
   return (
     <DataContext.Provider value={{
-      courses, users, categories, enrollments, refreshKey,
+      courses, users, categories, enrollments, expenses, refreshKey,
       addCourse, updateCourse, deleteCourse,
       addUser, updateUser, deleteUser,
       addCategory,
       addEnrollment, updateEnrollment, deleteEnrollment,
+      addExpense, updateExpense, deleteExpense,
       uploadFlyer, deleteFlyer,
       getDocentes, getDocenteById, getCategoryById,
       refresh

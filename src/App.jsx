@@ -8,6 +8,7 @@ import CourseForm from './pages/CourseForm';
 import CalendarView from './pages/CalendarView';
 import Teachers from './pages/Teachers';
 import Registrations from './pages/Registrations';
+import Accounting from './pages/Accounting';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/calendario" element={<CalendarView />} />
               <Route path="/docentes" element={<Teachers />} />
               <Route path="/registros" element={<Registrations />} />
+              <Route path="/contabilidad" element={<Accounting />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

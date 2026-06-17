@@ -313,13 +313,13 @@ export default function Registrations() {
             <table className="premium-table">
               <thead>
                 <tr>
+                  <th>Fecha</th>
                   <th>Alumno</th>
                   <th>DNI</th>
                   <th>Celular</th>
                   <th>Correo</th>
                   <th>Curso</th>
                   <th>Monto Pagado</th>
-                  <th>Fecha</th>
                   <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
@@ -328,6 +328,11 @@ export default function Registrations() {
                   const parsed = parseNombres(reg.nombres);
                   return (
                     <tr key={reg.id}>
+                      <td>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          {reg.created_at ? new Date(reg.created_at).toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                        </span>
+                      </td>
                       <td>
                         <div className="student-name-cell">
                           <strong>{parsed.nombres}</strong>
@@ -360,11 +365,6 @@ export default function Registrations() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          {reg.created_at ? new Date(reg.created_at).toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
-                        </span>
-                      </td>
-                      <td>
                         <div className="actions-cell">
                           <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(reg)} title="Editar">
                             <Edit2 size={16} />
@@ -384,7 +384,7 @@ export default function Registrations() {
           </div>
 
           {totalPages > 1 && (
-            <div className="pagination-controls">
+            <div className="pagination-controls" style={{ justifyContent: 'center' }}>
               <button 
                 type="button"
                 className="btn btn-sm btn-ghost" 

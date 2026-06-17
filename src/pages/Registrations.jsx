@@ -49,7 +49,7 @@ export default function Registrations() {
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   // Reset page on search or filter change
   useEffect(() => {
@@ -319,6 +319,7 @@ export default function Registrations() {
                   <th>Correo</th>
                   <th>Curso</th>
                   <th>Monto Pagado</th>
+                  <th>Fecha</th>
                   <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
@@ -356,6 +357,11 @@ export default function Registrations() {
                       <td>
                         <span className="monto-cell">
                           S/ {parseFloat(reg.monto || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {reg.created_at ? new Date(reg.created_at).toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                         </span>
                       </td>
                       <td>

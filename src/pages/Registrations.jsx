@@ -384,7 +384,7 @@ export default function Registrations() {
           </div>
 
           {totalPages > 1 && (
-            <div className="pagination-controls" style={{ justifyContent: 'center' }}>
+            <div className="pagination-controls">
               <button 
                 type="button"
                 className="btn btn-sm btn-ghost" 

@@ -58,6 +58,7 @@ export default function Layout({ children }) {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              data-tooltip={item.label}
               onClick={() => setSidebarOpen(false)}
             >
               <item.icon size={20} />
@@ -73,10 +74,10 @@ export default function Layout({ children }) {
               <span className="user-role">{isAdmin ? 'Administrador' : 'Docente'}</span>
             </div>
           </div>
-          <button className="nav-link" onClick={() => setShowProfileModal(true)}>
+          <button className="nav-link" data-tooltip="Mi Perfil" onClick={() => setShowProfileModal(true)}>
             <User size={20} /><span>Mi Perfil</span>
           </button>
-          <button className="nav-link logout-btn" onClick={handleLogout}>
+          <button className="nav-link logout-btn" data-tooltip="Cerrar sesión" onClick={handleLogout}>
             <LogOut size={20} /><span>Cerrar sesión</span>
           </button>
         </div>

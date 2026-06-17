@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Edit2, Trash2, Search, AlertTriangle, Mail, CreditCard, User, GraduationCap, Coins, Phone } from 'lucide-react';
@@ -27,6 +27,7 @@ export default function Registrations() {
 
   const [search, setSearch] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
+  const [filterPayment, setFilterPayment] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   
@@ -38,15 +39,48 @@ export default function Registrations() {
     monto: '',
     curso_id: '',
     codigo_pais: '+51',
-    celular: ''
+    celular: '',
+    tipo_pago: '',
+    comentarios: ''
   });
   
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset page on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterCourse, filterPayment]);
+
+  // Autocomplete by DNI
+  const handleDniChange = (dniValue) => {
+    setForm(prev => {
+      const updated = { ...prev, dni: dniValue };
+      if (dniValue.length >= 8) {
+        const existing = enrollments.find(e => e.dni === dniValue);
+        if (existing) {
+          const parsed = parseNombres(existing.nombres);
+          return {
+            ...updated,
+            nombres: parsed.nombres,
+            apellidos: existing.apellidos,
+            correo: existing.correo,
+            codigo_pais: parsed.codigo_pais,
+            celular: parsed.celular
+          };
+        }
+      }
+      return updated;
+    });
+  };
 
   // Reset form state
   const resetForm = () => {
-    setForm({ nombres: '', apellidos: '', dni: '', correo: '', monto: '', curso_id: '', codigo_pais: '+51', celular: '' });
+    setForm({ nombres: '', apellidos: '', dni: '', correo: '', monto: '', curso_id: '', codigo_pais: '+51', celular: '', tipo_pago: '', comentarios: '' });
     setEditId(null);
     setErrors({});
     setShowForm(false);
@@ -63,7 +97,9 @@ export default function Registrations() {
       monto: reg.monto,
       curso_id: reg.curso_id || '',
       codigo_pais: parsed.codigo_pais,
-      celular: parsed.celular
+      celular: parsed.celular,
+      tipo_pago: reg.tipo_pago || '',
+      comentarios: reg.comentarios || ''
     });
     setEditId(reg.id);
     setShowForm(true);
@@ -95,6 +131,10 @@ export default function Registrations() {
       err.monto = 'El monto es obligatorio';
     } else if (parseFloat(form.monto) < 0) {
       err.monto = 'El monto no puede ser negativo';
+    }
+
+    if (!form.tipo_pago) {
+      err.tipo_pago = 'Selecciona el tipo de pago';
     }
 
     if (!form.curso_id) {
@@ -129,7 +169,9 @@ export default function Registrations() {
       dni: form.dni.trim(),
       correo: form.correo.trim().toLowerCase(),
       monto: parseFloat(form.monto),
-      curso_id: form.curso_id
+      curso_id: form.curso_id,
+      tipo_pago: form.tipo_pago || 'completo',
+      comentarios: form.comentarios.trim() || ''
     };
 
     if (editId) {
@@ -165,6 +207,14 @@ export default function Registrations() {
   if (filterCourse) {
     filtered = filtered.filter(r => r.curso_id === filterCourse);
   }
+  if (filterPayment) {
+    filtered = filtered.filter(r => r.tipo_pago === filterPayment);
+  }
+
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedList = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   // Helper to find course by ID
   const getCourseName = (id) => {
@@ -241,6 +291,13 @@ export default function Registrations() {
             ))}
           </select>
         </div>
+        <div className="filter-group">
+          <select value={filterPayment} onChange={e => setFilterPayment(e.target.value)}>
+            <option value="">TODOS LOS PAGOS</option>
+            <option value="completo">COMPLETOS</option>
+            <option value="parcial">PARCIALES</option>
+          </select>
+        </div>
       </div>
 
       {/* Enrollments Table */}
@@ -266,7 +323,7 @@ export default function Registrations() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(reg => {
+                {paginatedList.map(reg => {
                   const parsed = parseNombres(reg.nombres);
                   return (
                     <tr key={reg.id}>
@@ -319,6 +376,39 @@ export default function Registrations() {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <button 
+                type="button"
+                className="btn btn-sm btn-ghost" 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              >
+                Anterior
+              </button>
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNumber => (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    className={`pagination-page-btn ${currentPage === pageNumber ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+              </div>
+              <button 
+                type="button"
+                className="btn btn-sm btn-ghost" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -377,7 +467,7 @@ export default function Registrations() {
                 id="reg-dni" 
                 type="text" 
                 value={form.dni} 
-                onChange={e => setForm({ ...form, dni: e.target.value })} 
+                onChange={e => handleDniChange(e.target.value)} 
                 className={errors.dni ? 'error' : ''} 
                 placeholder="DNI de 8 dígitos"
                 maxLength={12}
@@ -387,19 +477,34 @@ export default function Registrations() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="reg-monto"><Coins size={14} /> Monto pagado (S/) *</label>
-              <input 
-                id="reg-monto" 
-                type="number" 
-                step="0.01" 
-                value={form.monto} 
-                onChange={e => setForm({ ...form, monto: e.target.value })} 
-                className={errors.monto ? 'error' : ''} 
-                placeholder="Ej. 150.00"
-                required 
-              />
-              {errors.monto && <span className="form-error">{errors.monto}</span>}
+              <label htmlFor="reg-tipo-pago"><Coins size={14} /> Tipo de Pago *</label>
+              <select
+                id="reg-tipo-pago"
+                value={form.tipo_pago}
+                onChange={e => setForm({ ...form, tipo_pago: e.target.value })}
+                required
+              >
+                <option value="">-- Seleccionar --</option>
+                <option value="completo">Completo</option>
+                <option value="parcial">Parcial</option>
+              </select>
+              {errors.tipo_pago && <span className="form-error">{errors.tipo_pago}</span>}
             </div>
+          </div>
+
+          <div className="form-group" style={{ marginTop: '12px' }}>
+            <label htmlFor="reg-monto"><Coins size={14} /> Monto pagado (S/) *</label>
+            <input 
+              id="reg-monto" 
+              type="number" 
+              step="0.01" 
+              value={form.monto} 
+              onChange={e => setForm({ ...form, monto: e.target.value })} 
+              className={errors.monto ? 'error' : ''} 
+              placeholder="Ej. 150.00"
+              required 
+            />
+            {errors.monto && <span className="form-error">{errors.monto}</span>}
           </div>
 
           <div className="form-grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '12px', marginTop: '12px' }}>
@@ -465,6 +570,18 @@ export default function Registrations() {
               ))}
             </select>
             {errors.curso_id && <span className="form-error">{errors.curso_id}</span>}
+          </div>
+
+          <div className="form-group" style={{ marginTop: '12px' }}>
+            <label htmlFor="reg-comentarios"><AlertTriangle size={14} /> Comentarios</label>
+            <textarea
+              id="reg-comentarios"
+              value={form.comentarios}
+              onChange={e => setForm({ ...form, comentarios: e.target.value })}
+              placeholder="Detalla cualquier observación de la matrícula..."
+              rows={3}
+              style={{ resize: 'vertical' }}
+            />
           </div>
 
           <div className="form-actions">

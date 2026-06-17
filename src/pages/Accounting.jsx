@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -44,6 +44,17 @@ export default function Accounting() {
   });
   const [errors, setErrors] = useState({});
   const [deleteExpenseTarget, setDeleteExpenseTarget] = useState(null);
+
+  // Pagination States
+  const [incomePage, setIncomePage] = useState(1);
+  const [expensePage, setExpensePage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset page numbers when search, tabs, or filters change
+  useEffect(() => {
+    setIncomePage(1);
+    setExpensePage(1);
+  }, [searchQuery, datePreset, startDate, endDate, expenseTagFilter, courseFilter, activeTab]);
 
   // Helper to handle date presets
   const handlePresetChange = (preset) => {
@@ -129,6 +140,15 @@ export default function Accounting() {
     }
     return true;
   });
+
+  // Pagination calculations
+  const totalIncomePages = Math.ceil(filteredIncomes.length / itemsPerPage);
+  const incomeStartIndex = (incomePage - 1) * itemsPerPage;
+  const paginatedIncomes = filteredIncomes.slice(incomeStartIndex, incomeStartIndex + itemsPerPage);
+
+  const totalExpensePages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  const expenseStartIndex = (expensePage - 1) * itemsPerPage;
+  const paginatedExpenses = filteredExpenses.slice(expenseStartIndex, expenseStartIndex + itemsPerPage);
 
   // Calculate stats based on filtered data
   const totalIncomes = filteredIncomes.reduce((sum, r) => sum + (parseFloat(r.monto) || 0), 0);
@@ -523,7 +543,7 @@ export default function Accounting() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredIncomes.map(inc => {
+                  {paginatedIncomes.map(inc => {
                     const cleanName = inc.nombres.replace(/\s*\[Tel:.*\]/, '');
                     return (
                       <tr key={inc.id}>
@@ -555,6 +575,39 @@ export default function Accounting() {
                 </tbody>
               </table>
             </div>
+
+            {totalIncomePages > 1 && (
+              <div className="pagination-controls">
+                <button 
+                  type="button"
+                  className="btn btn-sm btn-ghost" 
+                  disabled={incomePage === 1}
+                  onClick={() => setIncomePage(prev => Math.max(prev - 1, 1))}
+                >
+                  Anterior
+                </button>
+                <div className="pagination-pages">
+                  {Array.from({ length: totalIncomePages }, (_, i) => i + 1).map(pageNumber => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      className={`pagination-page-btn ${incomePage === pageNumber ? 'active' : ''}`}
+                      onClick={() => setIncomePage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  type="button"
+                  className="btn btn-sm btn-ghost" 
+                  disabled={incomePage === totalIncomePages}
+                  onClick={() => setIncomePage(prev => Math.min(prev + 1, totalIncomePages))}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
         )
       )}
@@ -580,7 +633,7 @@ export default function Accounting() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredExpenses.map(exp => (
+                  {paginatedExpenses.map(exp => (
                     <tr key={exp.id}>
                       <td>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -627,6 +680,39 @@ export default function Accounting() {
                 </tbody>
               </table>
             </div>
+
+            {totalExpensePages > 1 && (
+              <div className="pagination-controls">
+                <button 
+                  type="button"
+                  className="btn btn-sm btn-ghost" 
+                  disabled={expensePage === 1}
+                  onClick={() => setExpensePage(prev => Math.max(prev - 1, 1))}
+                >
+                  Anterior
+                </button>
+                <div className="pagination-pages">
+                  {Array.from({ length: totalExpensePages }, (_, i) => i + 1).map(pageNumber => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      className={`pagination-page-btn ${expensePage === pageNumber ? 'active' : ''}`}
+                      onClick={() => setExpensePage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  type="button"
+                  className="btn btn-sm btn-ghost" 
+                  disabled={expensePage === totalExpensePages}
+                  onClick={() => setExpensePage(prev => Math.min(prev + 1, totalExpensePages))}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
         )
       )}

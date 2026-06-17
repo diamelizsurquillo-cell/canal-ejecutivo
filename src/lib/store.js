@@ -1,6 +1,71 @@
 import { supabase } from './supabase';
 
 export const store = {
+  // Hash passwords using SHA-256
+  hashPassword: async (password) => {
+    if (!password) return '';
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    } catch (e) {
+      console.error('Crypto error during password hashing:', e);
+      return password; // Fallback to plain text in case of legacy environments
+    }
+  },
+
+  // Offline queue syncing
+  queueSync: (table, operation, data) => {
+    try {
+      const queue = JSON.parse(localStorage.getItem('ah_pending_sync') || '[]');
+      queue.push({ 
+        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36), 
+        table, 
+        operation, 
+        data 
+      });
+      localStorage.setItem('ah_pending_sync', JSON.stringify(queue));
+    } catch (e) {
+      console.error('Error queueing offline operation:', e);
+    }
+  },
+
+  syncPending: async () => {
+    if (!navigator.onLine) return;
+    try {
+      const queue = JSON.parse(localStorage.getItem('ah_pending_sync') || '[]');
+      if (queue.length === 0) return;
+      
+      console.log(`Sincronizando ${queue.length} operaciones pendientes...`);
+      const failed = [];
+      
+      for (const op of queue) {
+        try {
+          if (op.operation === 'insert') {
+            const { error } = await supabase.from(op.table).insert([op.data]);
+            if (error) throw error;
+          } else if (op.operation === 'update') {
+            const { error } = await supabase.from(op.table).update(op.data).eq('id', op.data.id);
+            if (error) throw error;
+          } else if (op.operation === 'delete') {
+            const { error } = await supabase.from(op.table).delete().eq('id', op.data.id);
+            if (error) throw error;
+          }
+        } catch (err) {
+          console.error(`Error syncing operation:`, op, err);
+          failed.push(op);
+        }
+      }
+      
+      localStorage.setItem('ah_pending_sync', JSON.stringify(failed));
+    } catch (e) {
+      console.error('Error during pending sync:', e);
+    }
+  },
+
   // Users / Docentes
   getUsers: async () => {
     try {
@@ -44,10 +109,15 @@ export const store = {
         .from('users')
         .select('*')
         .eq('email', email)
-        .eq('password', password)
         .eq('activo', true)
-        .single();
-      if (data && !error) return data;
+        .maybeSingle();
+
+      if (data && !error) {
+        const hashedInput = await store.hashPassword(password);
+        if (data.password === hashedInput || data.password === password) {
+          return data;
+        }
+      }
     } catch (err) {
       console.warn('Error authenticating with Supabase, trying fallback:', err);
     }
@@ -59,22 +129,80 @@ export const store = {
       { id: 'mock-maria', nombre: 'María', email: 'maria@academichub.com', password: 'docente123', role: 'docente', especialidad: 'Ciencias de la Computación', activo: true }
     ];
 
-    const found = mockUsers.find(u => u.email === email && u.password === password && u.activo);
+    const hashedInput = await store.hashPassword(password);
+    const found = mockUsers.find(u => u.email === email && (u.password === password || u.password === hashedInput) && u.activo);
     return found || null;
   },
   addUser: async (user) => {
-    const { data, error } = await supabase.from('users').insert([user]).select();
-    if (error) console.error('Error adding user:', error);
-    return data && data.length > 0 ? data[0] : null;
+    const newUser = {
+      id: user.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)),
+      created_at: new Date().toISOString(),
+      ...user
+    };
+    if (newUser.password) {
+      newUser.password = await store.hashPassword(newUser.password);
+    }
+    try {
+      const { data, error } = await supabase.from('users').insert([newUser]).select();
+      if (error) throw error;
+      const saved = data && data.length > 0 ? data[0] : newUser;
+      
+      const local = localStorage.getItem('ah_users');
+      const list = local ? JSON.parse(local) : [];
+      list.push(saved);
+      localStorage.setItem('ah_users', JSON.stringify(list));
+      return saved;
+    } catch (err) {
+      console.warn('Error adding user to Supabase, saving locally:', err);
+      const local = localStorage.getItem('ah_users');
+      const list = local ? JSON.parse(local) : [];
+      list.push(newUser);
+      localStorage.setItem('ah_users', JSON.stringify(list));
+      
+      store.queueSync('users', 'insert', newUser);
+      return newUser;
+    }
   },
   updateUser: async (id, updates) => {
-    const { data, error } = await supabase.from('users').update(updates).eq('id', id).select();
-    if (error) console.error('Error updating user:', error);
-    return data && data.length > 0 ? data[0] : null;
+    const updatesToApply = { ...updates };
+    if (updatesToApply.password) {
+      updatesToApply.password = await store.hashPassword(updatesToApply.password);
+    }
+    try {
+      const { data, error } = await supabase.from('users').update(updatesToApply).eq('id', id).select();
+      if (error) throw error;
+      const updated = data && data.length > 0 ? data[0] : null;
+      
+      const local = localStorage.getItem('ah_users');
+      let list = local ? JSON.parse(local) : [];
+      list = list.map(item => item.id === id ? { ...item, ...updatesToApply, ...updated } : item);
+      localStorage.setItem('ah_users', JSON.stringify(list));
+      return updated || { id, ...updatesToApply };
+    } catch (err) {
+      console.warn('Error updating user in Supabase, saving locally:', err);
+      const local = localStorage.getItem('ah_users');
+      let list = local ? JSON.parse(local) : [];
+      list = list.map(item => item.id === id ? { ...item, ...updatesToApply } : item);
+      localStorage.setItem('ah_users', JSON.stringify(list));
+      
+      store.queueSync('users', 'update', { id, ...updatesToApply });
+      return { id, ...updatesToApply };
+    }
   },
   deleteUser: async (id) => {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    if (error) console.error('Error deleting user:', error);
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Error deleting user in Supabase, queueing operation:', err);
+      store.queueSync('users', 'delete', { id });
+    }
+    const local = localStorage.getItem('ah_users');
+    if (local) {
+      let list = JSON.parse(local);
+      list = list.filter(item => item.id !== id);
+      localStorage.setItem('ah_users', JSON.stringify(list));
+    }
   },
 
   getCourses: async () => {
@@ -100,18 +228,68 @@ export const store = {
     }
   },
   addCourse: async (course) => {
-    const { data, error } = await supabase.from('courses').insert([course]).select();
-    if (error) console.error('Error adding course:', error);
-    return data && data.length > 0 ? data[0] : null;
+    const newCourse = {
+      id: course.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)),
+      created_at: new Date().toISOString(),
+      ...course
+    };
+    try {
+      const { data, error } = await supabase.from('courses').insert([newCourse]).select();
+      if (error) throw error;
+      const saved = data && data.length > 0 ? data[0] : newCourse;
+      
+      const local = localStorage.getItem('ah_courses');
+      const list = local ? JSON.parse(local) : [];
+      list.unshift(saved);
+      localStorage.setItem('ah_courses', JSON.stringify(list));
+      return saved;
+    } catch (err) {
+      console.warn('Error adding course to Supabase, saving locally:', err);
+      const local = localStorage.getItem('ah_courses');
+      const list = local ? JSON.parse(local) : [];
+      list.unshift(newCourse);
+      localStorage.setItem('ah_courses', JSON.stringify(list));
+      
+      store.queueSync('courses', 'insert', newCourse);
+      return newCourse;
+    }
   },
   updateCourse: async (id, updates) => {
-    const { data, error } = await supabase.from('courses').update(updates).eq('id', id).select();
-    if (error) console.error('Error updating course:', error);
-    return data && data.length > 0 ? data[0] : null;
+    try {
+      const { data, error } = await supabase.from('courses').update(updates).eq('id', id).select();
+      if (error) throw error;
+      const updated = data && data.length > 0 ? data[0] : null;
+      
+      const local = localStorage.getItem('ah_courses');
+      let list = local ? JSON.parse(local) : [];
+      list = list.map(item => item.id === id ? { ...item, ...updates, ...updated } : item);
+      localStorage.setItem('ah_courses', JSON.stringify(list));
+      return updated || { id, ...updates };
+    } catch (err) {
+      console.warn('Error updating course in Supabase, saving locally:', err);
+      const local = localStorage.getItem('ah_courses');
+      let list = local ? JSON.parse(local) : [];
+      list = list.map(item => item.id === id ? { ...item, ...updates } : item);
+      localStorage.setItem('ah_courses', JSON.stringify(list));
+      
+      store.queueSync('courses', 'update', { id, ...updates });
+      return { id, ...updates };
+    }
   },
   deleteCourse: async (id) => {
-    const { error } = await supabase.from('courses').delete().eq('id', id);
-    if (error) console.error('Error deleting course:', error);
+    try {
+      const { error } = await supabase.from('courses').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Error deleting course in Supabase, queueing operation:', err);
+      store.queueSync('courses', 'delete', { id });
+    }
+    const local = localStorage.getItem('ah_courses');
+    if (local) {
+      let list = JSON.parse(local);
+      list = list.filter(item => item.id !== id);
+      localStorage.setItem('ah_courses', JSON.stringify(list));
+    }
   },
 
   // Categories
@@ -135,9 +313,30 @@ export const store = {
     }
   },
   addCategory: async (cat) => {
-    const { data, error } = await supabase.from('categories').insert([cat]).select();
-    if (error) console.error('Error adding category:', error);
-    return data && data.length > 0 ? data[0] : null;
+    const newCat = {
+      id: cat.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)),
+      ...cat
+    };
+    try {
+      const { data, error } = await supabase.from('categories').insert([newCat]).select();
+      if (error) throw error;
+      const saved = data && data.length > 0 ? data[0] : newCat;
+      
+      const local = localStorage.getItem('ah_categories');
+      const list = local ? JSON.parse(local) : [];
+      list.push(saved);
+      localStorage.setItem('ah_categories', JSON.stringify(list));
+      return saved;
+    } catch (err) {
+      console.warn('Error adding category, saving locally:', err);
+      const local = localStorage.getItem('ah_categories');
+      const list = local ? JSON.parse(local) : [];
+      list.push(newCat);
+      localStorage.setItem('ah_categories', JSON.stringify(list));
+      
+      store.queueSync('categories', 'insert', newCat);
+      return newCat;
+    }
   },
 
   // File uploads (Flyers)
@@ -179,8 +378,16 @@ export const store = {
     try {
       const { data, error } = await supabase.from('enrollments').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      localStorage.setItem('ah_enrollments', JSON.stringify(data || []));
-      return data || [];
+      const local = JSON.parse(localStorage.getItem('ah_enrollments') || '[]');
+      const supIds = new Set(data.map(d => d.id));
+      const merged = data.map(sup => {
+        const localEnr = local.find(l => l.id === sup.id);
+        return localEnr ? { ...sup, ...localEnr } : sup;
+      });
+      const localOnly = local.filter(l => !supIds.has(l.id));
+      const result = [...localOnly, ...merged];
+      localStorage.setItem('ah_enrollments', JSON.stringify(result));
+      return result;
     } catch (err) {
       console.warn('Falla en obtener matrículas de Supabase, usando LocalStorage:', err);
       const local = localStorage.getItem('ah_enrollments');
@@ -189,7 +396,7 @@ export const store = {
   },
   addEnrollment: async (enrollment) => {
     const newEnrollment = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36),
+      id: enrollment.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)),
       created_at: new Date().toISOString(),
       ...enrollment
     };
@@ -208,6 +415,8 @@ export const store = {
       const list = local ? JSON.parse(local) : [];
       list.unshift(newEnrollment);
       localStorage.setItem('ah_enrollments', JSON.stringify(list));
+      
+      store.queueSync('enrollments', 'insert', newEnrollment);
       return newEnrollment;
     }
   },
@@ -227,6 +436,8 @@ export const store = {
       let list = local ? JSON.parse(local) : [];
       list = list.map(item => item.id === id ? { ...item, ...updates } : item);
       localStorage.setItem('ah_enrollments', JSON.stringify(list));
+      
+      store.queueSync('enrollments', 'update', { id, ...updates });
       return { id, ...updates };
     }
   },
@@ -236,6 +447,7 @@ export const store = {
       if (error) throw error;
     } catch (err) {
       console.warn('Falla al eliminar matrícula en Supabase, eliminando de LocalStorage:', err);
+      store.queueSync('enrollments', 'delete', { id });
     }
     const local = localStorage.getItem('ah_enrollments');
     if (local) {
@@ -260,7 +472,7 @@ export const store = {
   },
   addExpense: async (expense) => {
     const newExpense = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36),
+      id: expense.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)),
       created_at: new Date().toISOString(),
       ...expense
     };
@@ -279,6 +491,8 @@ export const store = {
       const list = local ? JSON.parse(local) : [];
       list.unshift(newExpense);
       localStorage.setItem('ah_expenses', JSON.stringify(list));
+      
+      store.queueSync('expenses', 'insert', newExpense);
       return newExpense;
     }
   },
@@ -298,6 +512,8 @@ export const store = {
       let list = local ? JSON.parse(local) : [];
       list = list.map(item => item.id === id ? { ...item, ...updates } : item);
       localStorage.setItem('ah_expenses', JSON.stringify(list));
+      
+      store.queueSync('expenses', 'update', { id, ...updates });
       return { id, ...updates };
     }
   },
@@ -307,6 +523,7 @@ export const store = {
       if (error) throw error;
     } catch (err) {
       console.warn('Error deleting expense in Supabase, falling back to local:', err);
+      store.queueSync('expenses', 'delete', { id });
     }
     const local = localStorage.getItem('ah_expenses');
     if (local) {
@@ -321,9 +538,10 @@ export async function initializeStore() {
   try {
     const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
     if (count === 0) {
+      const adminPass = await store.hashPassword('admin123');
       await supabase.from('users').insert([
-        { nombre: 'Administrador', email: 'admin@academichub.com', password: 'admin123', role: 'admin', especialidad: 'Gestión Académica', activo: true },
-        { nombre: 'Jefferson', email: 'jefferson_15_6@hotmail.com', password: 'admin123', role: 'admin', activo: true },
+        { nombre: 'Administrador', email: 'admin@academichub.com', password: adminPass, role: 'admin', especialidad: 'Gestión Académica', activo: true },
+        { nombre: 'Jefferson', email: 'jefferson_15_6@hotmail.com', password: adminPass, role: 'admin', activo: true },
       ]);
     }
 
@@ -341,4 +559,14 @@ export async function initializeStore() {
   } catch (error) {
     console.error('Error initializing store:', error);
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    store.syncPending();
+  });
+  // Auto-run sync on load after a brief delay
+  setTimeout(() => {
+    store.syncPending();
+  }, 1000);
 }

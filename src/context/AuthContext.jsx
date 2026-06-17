@@ -10,9 +10,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const init = async () => {
       await initializeStore();
-      const saved = sessionStorage.getItem('ah_session');
+      const saved = localStorage.getItem('ah_session');
       if (saved) {
-        try { setUser(JSON.parse(saved)); } catch {}
+        try {
+          const sessionData = JSON.parse(saved);
+          if (sessionData.expiresAt && Date.now() < sessionData.expiresAt) {
+            setUser(sessionData.user);
+          } else {
+            localStorage.removeItem('ah_session');
+          }
+        } catch (e) {
+          localStorage.removeItem('ah_session');
+        }
       }
       setLoading(false);
     };
@@ -22,9 +31,13 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const found = await store.authenticate(email, password);
     if (found) {
-      const session = { id: found.id, nombre: found.nombre, email: found.email, role: found.role };
-      setUser(session);
-      sessionStorage.setItem('ah_session', JSON.stringify(session));
+      const sessionUser = { id: found.id, nombre: found.nombre, email: found.email, role: found.role };
+      setUser(sessionUser);
+      const sessionData = {
+        user: sessionUser,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      };
+      localStorage.setItem('ah_session', JSON.stringify(sessionData));
       return { success: true };
     }
     return { success: false, error: 'Credenciales incorrectas' };
@@ -32,13 +45,17 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     setUser(null);
-    sessionStorage.removeItem('ah_session');
+    localStorage.removeItem('ah_session');
   };
 
   const updateSession = (updates) => {
-    const updated = { ...user, ...updates };
-    setUser(updated);
-    sessionStorage.setItem('ah_session', JSON.stringify(updated));
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    const sessionData = {
+      user: updatedUser,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000
+    };
+    localStorage.setItem('ah_session', JSON.stringify(sessionData));
   };
 
   const isAdmin = user?.role === 'admin';

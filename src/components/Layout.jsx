@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import {
   LayoutDashboard, BookOpen, Calendar, Users, LogOut,
-  Menu, X, Sun, Moon, GraduationCap, User, ClipboardList, Coins
+  Menu, X, Sun, Moon, GraduationCap, User, ClipboardList, Coins,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import Modal from './Modal';
 
@@ -22,6 +23,10 @@ export default function Layout({ children }) {
   const { updateUser } = useData();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('ah_sidebar_collapsed');
+    return saved === 'true';
+  });
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem('ah_theme');
@@ -41,7 +46,7 @@ export default function Layout({ children }) {
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-brand">
           <GraduationCap size={28} />
           <span>CANAL EJECUTIVO</span>
@@ -78,12 +83,15 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main content */}
-      <div className="main-wrapper">
+      <div className={`main-wrapper ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="topbar">
           <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
           <div className="topbar-right">
+            <button className="theme-toggle" onClick={() => { setSidebarCollapsed(!sidebarCollapsed); localStorage.setItem('ah_sidebar_collapsed', !sidebarCollapsed); }} title="Ocultar/Mostrar menú">
+              {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+            </button>
             <button className="theme-toggle" onClick={() => setDark(!dark)} title="Cambiar tema">
               {dark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
